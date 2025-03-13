@@ -48,6 +48,18 @@ public class CityStatsManager : MonoBehaviour
             Debug.LogWarning($"Stat {name} not found!");
         }
     }
+
+    public void SafeModifyStat(string name, float amount)
+    {
+		if(statsDictionary.TryGetValue(name, out CityStat stat))
+		{
+			stat.SafeModify(amount);
+		}
+		else
+		{
+			Debug.LogWarning($"Stat {name} not found!");
+		}
+	}
     
     public void SetStat(string statName, float value)
     {

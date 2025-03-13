@@ -20,6 +20,14 @@ public class CityStat : ScriptableObject
         currentValue += amount;
     }
 
+    public void SafeModify(float amount)
+    {
+        if((amount < 0) && (Math.Abs(amount) > currentValue))
+            currentValue = 0;
+        else
+            currentValue += amount;
+    }
+
     public void SetValue(float newValue)
     {
         currentValue = newValue;
