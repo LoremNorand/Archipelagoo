@@ -1,32 +1,32 @@
-using System.Collections.Generic;
+п»їusing System.Collections.Generic;
 using UnityEngine;
 
 public class WorldGenerator : MonoBehaviour
 {
-	[Header("Настройки мира")]
-	[Tooltip("Ширина мира (в ячейках)")]
+	[Header("РќР°СЃС‚СЂРѕР№РєРё РјРёСЂР°")]
+	[Tooltip("РЁРёСЂРёРЅР° РјРёСЂР° (РІ СЏС‡РµР№РєР°С…)")]
 	public int worldWidth = 100;
-	[Tooltip("Высота мира (в ячейках)")]
+	[Tooltip("Р’С‹СЃРѕС‚Р° РјРёСЂР° (РІ СЏС‡РµР№РєР°С…)")]
 	public int worldHeight = 100;
-	[Tooltip("Размер одного вокселя в Unity Unit (0.1 Unit)")]
+	[Tooltip("Р Р°Р·РјРµСЂ РѕРґРЅРѕРіРѕ РІРѕРєСЃРµР»СЏ РІ Unity Unit (0.1 Unit)")]
 	public float voxelSize = 0.1f;
-	[Tooltip("Масштаб шума Перлина")]
+	[Tooltip("РњР°СЃС€С‚Р°Р± С€СѓРјР° РџРµСЂР»РёРЅР°")]
 	public float noiseScale = 10f;
-	[Tooltip("Порог для разделения суши и воды")]
+	[Tooltip("РџРѕСЂРѕРі РґР»СЏ СЂР°Р·РґРµР»РµРЅРёСЏ СЃСѓС€Рё Рё РІРѕРґС‹")]
 	[Range(0f, 1f)]
 	public float threshold = 0.5f;
-	[Tooltip("Размер чанка (кол-во ячеек по стороне)")]
+	[Tooltip("Р Р°Р·РјРµСЂ С‡Р°РЅРєР° (РєРѕР»-РІРѕ СЏС‡РµРµРє РїРѕ СЃС‚РѕСЂРѕРЅРµ)")]
 	public int chunkSize = 16;
-	[Tooltip("Сид генерации. Если 0, то используется случайное значение")]
+	[Tooltip("РЎРёРґ РіРµРЅРµСЂР°С†РёРё. Р•СЃР»Рё 0, С‚Рѕ РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ СЃР»СѓС‡Р°Р№РЅРѕРµ Р·РЅР°С‡РµРЅРёРµ")]
 	public int seed = 0;
 
-	[Header("Материалы (опционально)")]
+	[Header("РњР°С‚РµСЂРёР°Р»С‹ (РѕРїС†РёРѕРЅР°Р»СЊРЅРѕ)")]
 	public Material landMaterial;
 	public Material waterMaterial;
 
 	private void Start()
 	{
-		// Если сид не задан (0), генерируем случайный
+		// Р•СЃР»Рё СЃРёРґ РЅРµ Р·Р°РґР°РЅ (0), РіРµРЅРµСЂРёСЂСѓРµРј СЃР»СѓС‡Р°Р№РЅС‹Р№
 		if(seed == 0)
 			seed = Random.Range(1, 100000);
 
@@ -34,7 +34,7 @@ public class WorldGenerator : MonoBehaviour
 	}
 
 	/// <summary>
-	/// Генерирует мир, деля его на чанки.
+	/// Р“РµРЅРµСЂРёСЂСѓРµС‚ РјРёСЂ, РґРµР»СЏ РµРіРѕ РЅР° С‡Р°РЅРєРё.
 	/// </summary>
 	private void GenerateWorld()
 	{
@@ -50,82 +50,211 @@ public class WorldGenerator : MonoBehaviour
 		}
 	}
 
+	private bool IsCellLand(int chunkX, int chunkY, int localX, int localY)
+	{
+		// Р•СЃР»Рё РІС‹С…РѕРґРёРј Р·Р° РіСЂР°РЅРёС†С‹ С‡Р°РЅРєР°, СЃС‡РёС‚Р°РµРј, С‡С‚Рѕ С‚Р°Рј "РЅРµ СЃСѓС€Р°" (С‡С‚РѕР±С‹ СЃРѕР·РґР°РІР°С‚СЊ Р±РѕРєРѕРІСѓСЋ РіСЂР°РЅСЊ)
+		if(localX < 0 || localX >= chunkSize || localY < 0 || localY >= chunkSize)
+			return false;
+
+		int worldX = chunkX * chunkSize + localX;
+		int worldY = chunkY * chunkSize + localY;
+
+		float noiseValue = Mathf.PerlinNoise((worldX + seed) / noiseScale, (worldY + seed) / noiseScale);
+		return (noiseValue > threshold);
+	}
+
 	/// <summary>
-	/// Создаёт чанк и генерирует его Mesh.
+	/// Р”РѕР±Р°РІР»СЏРµС‚ РІ РѕР±С‰РёРµ СЃРїРёСЃРєРё РІРµСЂС€РёРЅС‹ Рё С‚СЂРµСѓРіРѕР»СЊРЅРёРєРё РґР»СЏ РєРІР°РґСЂР°С‚Р° (РґРІСѓС… С‚СЂРµСѓРіРѕР»СЊРЅРёРєРѕРІ).
+	/// corners: РјР°СЃСЃРёРІ РёР· 4-С… СѓРіР»РѕРІ РєРІР°РґСЂР°С‚Р° РІ РїРѕСЂСЏРґРєРµ РѕР±С…РѕРґР° (0в†’1в†’2в†’3).
+	/// targetTriangles: СЃРїРёСЃРѕРє С‚СЂРµСѓРіРѕР»СЊРЅРёРєРѕРІ, РІ РєРѕС‚РѕСЂС‹Р№ РґРѕР±Р°РІР»СЏРµРј (landTriangles РёР»Рё waterTriangles).
+	/// vertList, uvList, colorList вЂ” РѕР±С‰РёРµ СЃРїРёСЃРєРё, РєСѓРґР° РґРѕР±Р°РІР»СЏСЋС‚СЃСЏ РґР°РЅРЅС‹Рµ.
 	/// </summary>
-	/// <param name="chunkX">Индекс чанка по X</param>
-	/// <param name="chunkY">Индекс чанка по Y</param>
+	private void AddQuad(
+		Vector3[] corners,
+		List<int> targetTriangles,
+		List<Vector3> vertList,
+		List<Vector2> uvList,
+		List<Color> colorList,
+		Color quadColor
+	)
+	{
+		int startIndex = vertList.Count;
+
+		// Р”РѕР±Р°РІР»СЏРµРј РІРµСЂС€РёРЅС‹
+		for(int i = 0; i < 4; i++)
+		{
+			vertList.Add(corners[i]);
+			uvList.Add(new Vector2(corners[i].x, corners[i].z)); // РЈСЃР»РѕРІРЅС‹Р№ UV
+			colorList.Add(quadColor);
+		}
+
+		// Р”РІР° С‚СЂРµСѓРіРѕР»СЊРЅРёРєР°
+		targetTriangles.Add(startIndex);
+		targetTriangles.Add(startIndex + 2);
+		targetTriangles.Add(startIndex + 1);
+
+		targetTriangles.Add(startIndex);
+		targetTriangles.Add(startIndex + 3);
+		targetTriangles.Add(startIndex + 2);
+	}
+
+	/// <summary>
+	/// РЎРѕР·РґР°С‘С‚ С‡Р°РЅРє Рё РіРµРЅРµСЂРёСЂСѓРµС‚ РµРіРѕ Mesh СЃ РґРІСѓРјСЏ СЃСѓР±РјРµС€Р°РјРё: РґР»СЏ СЃСѓС€Рё Рё РґР»СЏ РІРѕРґС‹.
+	/// </summary>
+	/// <param name="chunkX">РРЅРґРµРєСЃ С‡Р°РЅРєР° РїРѕ X</param>
+	/// <param name="chunkY">РРЅРґРµРєСЃ С‡Р°РЅРєР° РїРѕ Y</param>
 	private void CreateChunk(int chunkX, int chunkY)
 	{
-		// Создаем объект чанка и делаем его дочерним текущему объекту
+		// РЎРѕР·РґР°РµРј РѕР±СЉРµРєС‚ С‡Р°РЅРєР° Рё РґРµР»Р°РµРј РµРіРѕ РґРѕС‡РµСЂРЅРёРј С‚РµРєСѓС‰РµРјСѓ РѕР±СЉРµРєС‚Сѓ
 		GameObject chunkGO = new GameObject("Chunk_" + chunkX + "_" + chunkY);
 		chunkGO.transform.parent = transform;
-		// Позиция чанка рассчитывается исходя из его размеров и размера вокселя
+		// РџРѕР·РёС†РёСЏ С‡Р°РЅРєР° СЂР°СЃСЃС‡РёС‚С‹РІР°РµС‚СЃСЏ РёСЃС…РѕРґСЏ РёР· РµРіРѕ СЂР°Р·РјРµСЂРѕРІ Рё СЂР°Р·РјРµСЂР° РІРѕРєСЃРµР»СЏ
 		chunkGO.transform.position = new Vector3(chunkX * chunkSize * voxelSize, 0, chunkY * chunkSize * voxelSize);
 
 		MeshFilter mf = chunkGO.AddComponent<MeshFilter>();
 		MeshRenderer mr = chunkGO.AddComponent<MeshRenderer>();
 
 		Mesh mesh = new Mesh();
-		List<Vector3> vertices = new List<Vector3>();
-		List<int> triangles = new List<int>();
-		List<Vector2> uvs = new List<Vector2>();
-		List<Color> colors = new List<Color>(); // Используем для покраски: суша – зелёная, вода – синяя
 
-		int vertIndex = 0;
-		// Проходим по каждой ячейке в чанке
+		// РћР±С‰РёРµ СЃРїРёСЃРєРё РІРµСЂС€РёРЅ, UV Рё С†РІРµС‚РѕРІ
+		List<Vector3> vertices = new List<Vector3>();
+		List<Vector2> uvs = new List<Vector2>();
+		List<Color> colors = new List<Color>();
+
+		// РЎРїРёСЃРєРё С‚СЂРµСѓРіРѕР»СЊРЅРёРєРѕРІ РґР»СЏ СЃСѓС€Рё Рё РІРѕРґС‹
+		List<int> landTriangles = new List<int>();
+		List<int> waterTriangles = new List<int>();
+
+		// РџРµСЂРµР±РёСЂР°РµРј СЏС‡РµР№РєРё С‡Р°РЅРєР°
 		for(int x = 0; x < chunkSize; x++)
 		{
 			for(int y = 0; y < chunkSize; y++)
 			{
-				// Определяем позицию ячейки в мировых координатах
+				// РћРїСЂРµРґРµР»СЏРµРј РїРѕР·РёС†РёСЋ СЏС‡РµР№РєРё РІ РјРёСЂРѕРІС‹С… РєРѕРѕСЂРґРёРЅР°С‚Р°С…
 				int worldX = chunkX * chunkSize + x;
 				int worldY = chunkY * chunkSize + y;
-				// Вычисляем значение шума
+				// Р’С‹С‡РёСЃР»СЏРµРј Р·РЅР°С‡РµРЅРёРµ С€СѓРјР°
 				float noiseValue = Mathf.PerlinNoise((worldX + seed) / noiseScale, (worldY + seed) / noiseScale);
 				bool isLand = noiseValue > threshold;
-				Color cellColor = isLand ? Color.green : Color.blue;
-				// Задаем высоту: для суши можно задать небольшой подъем, для воды – нулевая высота или чуть ниже
+				// Р—Р°РґР°РµРј РІС‹СЃРѕС‚Сѓ: РґР»СЏ СЃСѓС€Рё РЅРµР±РѕР»СЊС€РѕР№ РїРѕРґСЉРµРј, РґР»СЏ РІРѕРґС‹ вЂ“ РЅСѓР»РµРІР°СЏ РІС‹СЃРѕС‚Р°
 				float cellHeight = isLand ? voxelSize : 0f;
 
-				// Создаем простой квад с вершинами, соответствующий ячейке
+				// Р—Р°РїРѕРјРёРЅР°РµРј РЅР°С‡Р°Р»СЊРЅС‹Р№ РёРЅРґРµРєСЃ РІРµСЂС€РёРЅ РґР»СЏ РґР°РЅРЅРѕР№ СЏС‡РµР№РєРё
+				int vertIndex = vertices.Count;
+
+				// РЎРѕР·РґР°РµРј РІРµСЂС€РёРЅС‹ РєРІР°РґСЂР°С‚Р° (СЏС‡РµР№РєРё)
 				vertices.Add(new Vector3(x * voxelSize, cellHeight, y * voxelSize));
 				vertices.Add(new Vector3((x + 1) * voxelSize, cellHeight, y * voxelSize));
 				vertices.Add(new Vector3((x + 1) * voxelSize, cellHeight, (y + 1) * voxelSize));
 				vertices.Add(new Vector3(x * voxelSize, cellHeight, (y + 1) * voxelSize));
 
-				// Простые UV для текстурирования
+				// РџСЂРѕСЃС‚РѕР№ UV РґР»СЏ С‚РµРєСЃС‚СѓСЂРёСЂРѕРІР°РЅРёСЏ
 				uvs.Add(new Vector2(0, 0));
 				uvs.Add(new Vector2(1, 0));
 				uvs.Add(new Vector2(1, 1));
 				uvs.Add(new Vector2(0, 1));
 
-				// Задаем цвет каждой вершины для визуализации
+				// РњРѕР¶РЅРѕ Р·Р°РґР°С‚СЊ С†РІРµС‚ РґР»СЏ РѕС‚Р»Р°РґРєРё (Р±СѓРґРµС‚ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ, РµСЃР»Рё С€РµР№РґРµСЂ СѓС‡РёС‚С‹РІР°РµС‚ vertex color)
+				Color cellColor = isLand ? Color.green : Color.blue;
 				colors.Add(cellColor);
 				colors.Add(cellColor);
 				colors.Add(cellColor);
 				colors.Add(cellColor);
 
-				// Добавляем два треугольника для квадрата
-				triangles.Add(vertIndex);
-				triangles.Add(vertIndex + 2);
-				triangles.Add(vertIndex + 1);
-				triangles.Add(vertIndex);
-				triangles.Add(vertIndex + 3);
-				triangles.Add(vertIndex + 2);
-				vertIndex += 4;
+				// Р”РІР° С‚СЂРµСѓРіРѕР»СЊРЅРёРєР° РґР»СЏ РєРІР°РґСЂР°С‚Р°
+				int[] cellTriangles = new int[]
+				{
+					vertIndex, vertIndex + 2, vertIndex + 1,
+					vertIndex, vertIndex + 3, vertIndex + 2
+				};
+
+				// Р”РѕР±Р°РІР»СЏРµРј С‚СЂРµСѓРіРѕР»СЊРЅРёРєРё РІ СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓСЋС‰РёР№ СЃРїРёСЃРѕРє
+				if(isLand)
+				{
+					landTriangles.AddRange(cellTriangles);
+				}
+				else
+				{
+					waterTriangles.AddRange(cellTriangles);
+				}
+
+				if(isLand && cellHeight > 0f)
+				{
+					// Р§РµС‚С‹СЂРµ РЅР°РїСЂР°РІР»РµРЅРёСЏ: left, right, back, forward
+					// 1) LEFT (x-1)
+					if(!IsCellLand(chunkX, chunkY, x - 1, y))
+					{
+						// РљРІР°РґСЂР°С‚ РѕС‚ РІС‹СЃРѕС‚С‹ 0 РґРѕ cellHeight
+						Vector3[] corners = new Vector3[4];
+						corners[0] = new Vector3(x * voxelSize, 0, y * voxelSize);
+						corners[1] = new Vector3(x * voxelSize, cellHeight, y * voxelSize);
+						corners[2] = new Vector3(x * voxelSize, cellHeight, (y + 1) * voxelSize);
+						corners[3] = new Vector3(x * voxelSize, 0, (y + 1) * voxelSize);
+
+						AddQuad(corners, landTriangles, vertices, uvs, colors, Color.green);
+					}
+
+					// 2) RIGHT (x+1)
+					if(!IsCellLand(chunkX, chunkY, x + 1, y))
+					{
+						Vector3[] corners = new Vector3[4];
+						corners[0] = new Vector3((x + 1) * voxelSize, 0, (y + 1) * voxelSize);
+						corners[1] = new Vector3((x + 1) * voxelSize, cellHeight, (y + 1) * voxelSize);
+						corners[2] = new Vector3((x + 1) * voxelSize, cellHeight, y * voxelSize);
+						corners[3] = new Vector3((x + 1) * voxelSize, 0, y * voxelSize);
+
+						AddQuad(corners, landTriangles, vertices, uvs, colors, Color.green);
+					}
+
+					// 3) BACK (y-1)
+					if(!IsCellLand(chunkX, chunkY, x, y - 1))
+					{
+						Vector3[] corners = new Vector3[4];
+						corners[0] = new Vector3((x + 1) * voxelSize, 0, y * voxelSize);
+						corners[1] = new Vector3((x + 1) * voxelSize, cellHeight, y * voxelSize);
+						corners[2] = new Vector3(x * voxelSize, cellHeight, y * voxelSize);
+						corners[3] = new Vector3(x * voxelSize, 0, y * voxelSize);
+
+						AddQuad(corners, landTriangles, vertices, uvs, colors, Color.green);
+					}
+
+					// 4) FORWARD (y+1)
+					if(!IsCellLand(chunkX, chunkY, x, y + 1))
+					{
+						Vector3[] corners = new Vector3[4];
+						corners[0] = new Vector3(x * voxelSize, 0, (y + 1) * voxelSize);
+						corners[1] = new Vector3(x * voxelSize, cellHeight, (y + 1) * voxelSize);
+						corners[2] = new Vector3((x + 1) * voxelSize, cellHeight, (y + 1) * voxelSize);
+						corners[3] = new Vector3((x + 1) * voxelSize, 0, (y + 1) * voxelSize);
+
+						AddQuad(corners, landTriangles, vertices, uvs, colors, Color.green);
+					}
+				}
 			}
 		}
 
+
+
+		// РќР°Р·РЅР°С‡Р°РµРј РѕР±С‰РёРµ РІРµСЂС€РёРЅС‹, UV Рё С†РІРµС‚Р° РІ Mesh
 		mesh.vertices = vertices.ToArray();
-		mesh.triangles = triangles.ToArray();
 		mesh.uv = uvs.ToArray();
 		mesh.colors = colors.ToArray();
+
+		// РЈРєР°Р·С‹РІР°РµРј, С‡С‚Рѕ Р±СѓРґРµС‚ РґРІР° СЃСѓР±РјРµС€Р°: [0] - СЃСѓС€Р°, [1] - РІРѕРґР°
+		mesh.subMeshCount = 2;
+		mesh.SetTriangles(landTriangles, 0);
+		mesh.SetTriangles(waterTriangles, 1);
 		mesh.RecalculateNormals();
 
 		mf.mesh = mesh;
-		// Используем стандартный шейдер, который может работать с цветовыми атрибутами вершин
-		mr.material = new Material(Shader.Find("Standard"));
-		// При необходимости можно сменить материал на landMaterial/waterMaterial
+
+		// Р•СЃР»Рё РјР°С‚РµСЂРёР°Р»С‹ РЅРµ РЅР°Р·РЅР°С‡РµРЅС‹, РёСЃРїРѕР»СЊР·СѓРµРј СЃС‚Р°РЅРґР°СЂС‚РЅС‹Р№ С€РµР№РґРµСЂ
+		if(landMaterial == null)
+			landMaterial = new Material(Shader.Find("Standard"));
+		if(waterMaterial == null)
+			waterMaterial = new Material(Shader.Find("Standard"));
+
+		// РќР°Р·РЅР°С‡Р°РµРј РґРІР° РјР°С‚РµСЂРёР°Р»Р°: РїРµСЂРІС‹Р№ РґР»СЏ СЃСѓС€Рё, РІС‚РѕСЂРѕР№ РґР»СЏ РІРѕРґС‹
+		mr.materials = new Material[] { landMaterial, waterMaterial };
 	}
 }
